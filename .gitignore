@@ -1,0 +1,12 @@
+*.c
+*.elf
+*.hex
+*.o
+*.swp
+.DS_Store
+.stack-work
+cadet.c
+cadet.h
+ivory.h
+ivory_asserts.h
+ivory_templates.h

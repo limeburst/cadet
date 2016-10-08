@@ -1,33 +1,46 @@
+CC = avr-gcc
+DFU = dfu-programmer
 MCU = atmega32u4
+OBJCOPY = avr-objcopy
+STACK = stack
 
 CFLAGS += -DF_CPU=16000000UL
 CFLAGS += -Os
 CFLAGS += -mmcu=$(MCU)
 CFLAGS += -std=c11
 
-LDFLAGS += -Wl,--gc-sections
-
-all: cadet.hex
+haskell = cadet.cabal stack.yaml
+ivory-gen = cadet.c ivory.h ivory_asserts.h ivory_templates.h
+ivory-src = app/Main.hs src/Lib.hs
+objects = cadet.o main.o print.o usb.o
 
 cadet.hex: cadet.elf
-	avr-objcopy -O ihex cadet.elf cadet.hex
+	$(OBJCOPY) -O ihex $< $@
 
-cadet.elf: cadet.o usb.o print.o
-	avr-gcc -gcc $(CFLAGS) $^ -o cadet.elf $(LDFLAGS)
+cadet.elf: $(objects)
+	$(CC) $(CFLAGS) -o $@ $(objects)
 
-%.o : %.c
-	avr-gcc -c $(CFLAGS) $< -o $@ 
+cadet.o: $(ivory-gen)
+main.o: main.c print.h usb.h cadet.h
+print.o: print.c print.h usb.h
+usb.o: usb.c usb.h cadet.h
+
+cadet.c: $(ivory-src) $(haskell)
+	$(STACK) build
+	$(STACK) exec cadet -- --src-dir=.
 
 clean: 
-	rm -f *.o *.elf *.hex
+	$(RM) $(objects) $(ivory-gen) cadet.hex cadet.elf
 
 erase:
-	dfu-programmer $(MCU) erase
+	$(DFU) $(MCU) erase
 
 flash: cadet.hex
-	dfu-programmer $(MCU) flash cadet.hex
+	$(DFU) $(MCU) flash $<
 
 launch:
-	dfu-programmer $(MCU) launch --no-reset
+	$(DFU) $(MCU) launch --no-reset
+
+all: cadet.hex
 
 .PHONY: all clean erase flash launch

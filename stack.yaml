@@ -1,0 +1,8 @@
+packages:
+- '.'
+extra-deps:
+- ivory-0.1.0.3
+- ivory-artifact-0.1.0.3
+- ivory-backend-c-0.1.0.3
+- ivory-opts-0.1.0.3
+resolver: lts-6.18

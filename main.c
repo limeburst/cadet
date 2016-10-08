@@ -3,16 +3,14 @@
 #include <avr/interrupt.h>
 #include <util/delay.h>
 
+#include "cadet.h"
 #include "usb.h"
 #include "print.h"
 
-void select_row(uint8_t row);
-void deselect_row(uint8_t row);
-uint16_t read_column(void);
 int main(void);
-void update_keys(uint16_t matrix[]);
-bool is_modifier(uint8_t key);
-bool fn_pressed(uint16_t matrix[]);
+uint16_t read_column(void);
+void deselect_row(uint8_t row);
+void select_row(uint8_t row);
 
 void select_row(uint8_t row) {
     if (row == 0) {
@@ -73,15 +71,6 @@ void print_matrix(uint16_t matrix[]) {
     }
 }
 
-bool matrix_changed(uint16_t matrix_a[], uint16_t matrix_b[]) {
-    for (uint8_t i = 0; i < 5; i++) {
-        if (matrix_a[i] != matrix_b[i]) {
-            return true;
-        }
-    }
-    return false;
-}
-
 uint8_t keymap[2][5][15] = {
     {
         {KEY_ESC, KEY_1, KEY_2, KEY_3, KEY_4, KEY_5, KEY_6, KEY_7, KEY_8, KEY_9, KEY_0, KEY_MINUS, KEY_EQUAL, KEY_BACKSLASH, KEY_TILDE},
@@ -98,69 +87,6 @@ uint8_t keymap[2][5][15] = {
         {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
     },
 };
-
-bool fn_pressed(uint16_t matrix[]) {
-    for (uint8_t i = 0; i < 5; i++) {
-        for (uint8_t j = 0; j < 15; j++) {
-            if ((matrix[i] >> j) & 1) {
-                if (keymap[0][i][j] == KEY_FN) {
-                    return true;
-                }
-            }
-        }
-    }
-    return false;
-}
-
-bool is_modifier(uint8_t key) {
-    return key >= 0xE0 && key <= 0xE7;
-}
-
-void update_keys(uint16_t matrix[]) {
-    // initialize
-    for (uint8_t i = 0; i < 6; i++) {
-        keyboard_keys[i] = 0;
-    }
-    keyboard_modifier_keys = 0;
-    // set
-    uint8_t n = 0;
-    uint8_t layer;
-    if (fn_pressed(matrix)) {
-        layer = 1;
-    } else {
-        layer = 0;
-    }
-    for (uint8_t i = 0; i < 5; i++) {
-        for (uint8_t j = 0; j < 15; j++) {
-            if ((matrix[i] >> j) & 1) {
-                uint8_t key = 0;
-                for (uint8_t k = layer; k >= 0; k--) {
-                    if (keymap[k][i][j] != 0) {
-                        key = keymap[k][i][j];
-                        break;
-                    }
-                }
-                if (is_modifier(key)) {
-                    switch (key) {
-                        case 0xE0: keyboard_modifier_keys |= 0x01; break;
-                        case 0xE1: keyboard_modifier_keys |= 0x02; break;
-                        case 0xE2: keyboard_modifier_keys |= 0x04; break;
-                        case 0xE3: keyboard_modifier_keys |= 0x08; break;
-                        case 0xE4: keyboard_modifier_keys |= 0x10; break;
-                        case 0xE5: keyboard_modifier_keys |= 0x20; break;
-                        case 0xE6: keyboard_modifier_keys |= 0x40; break;
-                        case 0xE7: keyboard_modifier_keys |= 0x80; break;
-                    }
-                } else {
-                    if (n < 6) {
-                        keyboard_keys[n] = key;
-                        n++;
-                    }
-                }
-            }
-        }
-    }
-}
 
 int main(void) {
     // set for 16 MHz clock
@@ -226,7 +152,9 @@ int main(void) {
         }
         // compare current and previous matrix
         if (matrix_changed(matrix_p, matrix_c) == true) {
-            update_keys(matrix_c);
+            update_report(matrix_c, keymap);
+            keyboard_modifier_keys = report.modifier;
+            memcpy(&keyboard_keys, &report.keycode, sizeof keyboard_keys);
             usb_keyboard_send();
         }
         // set previous matrix
