@@ -73,7 +73,8 @@ get_fn_key = proc "get_fn_key" $ \ keymap row col -> body $ do
     (ret fn_layer_key)
 
 update_report :: Def ('[Ref s (Array 5 (Stored Uint16)),
-                        Ref s (Array 2 (Array 5 (Array 15 (Stored Uint8))))] :-> ())
+                        Ref s (Array 2 (Array 5 (Array 15 (Stored Uint8))))]
+                      :-> ())
 update_report = proc "update_report" $ \ matrix keymap -> body $ do
   store ((addrOf report) ~> modifier) 0
   arrayMap $ \ ix -> do
@@ -95,7 +96,10 @@ update_report = proc "update_report" $ \ matrix keymap -> body $ do
           current_modifier <- deref ((addrOf report) ~> modifier)
           is_modifier_key <- call is_modifier key
           ifte_ (is_modifier_key)
-            (store ((addrOf report) ~> modifier) (current_modifier .| (1 `iShiftL` (key - 0xE0))))
+            (store
+              ((addrOf report) ~> modifier)
+              (current_modifier .| (1 `iShiftL` (key - 0xE0)))
+            )
             (do 
               keys_val <- deref keys
               ifte_ (keys_val ==? 0)
