@@ -26,6 +26,7 @@ print.o: print.c print.h usb.h
 usb.o: usb.c usb.h cadet.h
 
 cadet.c: $(ivory-src) $(haskell)
+	$(STACK) setup
 	$(STACK) build
 	$(STACK) exec cadet -- --src-dir=.
 
