@@ -8,6 +8,9 @@ module Lib where
 import Ivory.Language
 import qualified Ivory.Compile.C.CmdlineFrontend as C (compile)
 
+type Keymap = Array 5 (Array 15 (Stored Uint8))
+type Matrix = Array 5 (Stored Uint16)
+
 key_none = 0x00
 key_fn = 0xC0
 key_left_ctrl = 0xE0
@@ -34,8 +37,7 @@ is_modifier :: Def ('[Uint8] :-> IBool)
 is_modifier = proc "is_modifier" $ \ key -> body $ do 
   ret (key >=? key_left_ctrl .&& key <=? key_right_gui)
 
-matrix_changed :: Def ('[Ref s (Array 5 (Stored Uint16)),
-                         Ref s (Array 5 (Stored Uint16))] :-> IBool)
+matrix_changed :: Def ('[Ref s Matrix, Ref s Matrix] :-> IBool)
 matrix_changed = proc "matrix_changed" $ \ a b -> body $ do
   n <- local (ival (0 :: Uint8))
   arrayMap $ \ ix -> do
@@ -48,8 +50,7 @@ matrix_changed = proc "matrix_changed" $ \ a b -> body $ do
         store n nn)
   ret false
 
-fn_pressed :: Def ('[Ref s (Array 5 (Stored Uint16)),
-                     Ref s (Array 5 (Array 15 (Stored Uint8)))] :-> IBool)
+fn_pressed :: Def ('[Ref s Matrix, Ref s Keymap] :-> IBool)
 fn_pressed = proc "fn_pressed" $ \ matrix keymap -> body $ do
   n <- local (ival (0 :: Uint8))
   arrayMap $ \ ix -> do
@@ -63,8 +64,7 @@ fn_pressed = proc "fn_pressed" $ \ matrix keymap -> body $ do
           store n nn)
   ret false
 
-get_fn_key :: Def ('[Ref s (Array 2 (Array 5 (Array 15 (Stored Uint8)))),
-                     Ix 5, Ix 15] :-> Uint8)
+get_fn_key :: Def ('[Ref s (Array 2 Keymap), Ix 5, Ix 15] :-> Uint8)
 get_fn_key = proc "get_fn_key" $ \ keymap row col -> body $ do
   fn_layer_key <- deref (keymap ! 1 ! row ! col)
   default_layer_key <- deref (keymap ! 0 ! row ! col)
@@ -72,9 +72,7 @@ get_fn_key = proc "get_fn_key" $ \ keymap row col -> body $ do
     (ret default_layer_key)
     (ret fn_layer_key)
 
-update_report :: Def ('[Ref s (Array 5 (Stored Uint16)),
-                        Ref s (Array 2 (Array 5 (Array 15 (Stored Uint8))))]
-                      :-> ())
+update_report :: Def ('[Ref s Matrix, Ref s (Array 2 Keymap)] :-> ())
 update_report = proc "update_report" $ \ matrix keymap -> body $ do
   store ((addrOf report) ~> modifier) 0
   arrayMap $ \ ix -> do
