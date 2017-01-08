@@ -65,28 +65,28 @@ fn_pressed = proc "fn_pressed" $ \ matrix keymap -> body $ do
   ret false
 
 get_fn_key :: Def ('[Ref s (Array 2 Keymap), Ix 5, Ix 15] :-> Uint8)
-get_fn_key = proc "get_fn_key" $ \ keymap row col -> body $ do
-  fn_layer_key <- deref (keymap ! 1 ! row ! col)
-  default_layer_key <- deref (keymap ! 0 ! row ! col)
+get_fn_key = proc "get_fn_key" $ \ keymaps row col -> body $ do
+  fn_layer_key <- deref (keymaps ! 1 ! row ! col)
+  default_layer_key <- deref (keymaps ! 0 ! row ! col)
   ifte_ (fn_layer_key ==? 0)
     (ret default_layer_key)
     (ret fn_layer_key)
 
 update_report :: Def ('[Ref s Matrix, Ref s (Array 2 Keymap)] :-> ())
-update_report = proc "update_report" $ \ matrix keymap -> body $ do
+update_report = proc "update_report" $ \ matrix keymaps -> body $ do
   store ((addrOf report) ~> modifier) 0
   arrayMap $ \ ix -> do
     store (((addrOf report) ~> keycode) ! (ix :: Ix 6)) 0
   keys <- local (izero :: Init ('Stored Uint8))
-  fp <- call fn_pressed matrix (keymap ! 0)
+  fp <- call fn_pressed matrix (keymaps ! 0)
   arrayMap $ \ ix -> do
     arrayMap $ \ iy -> do
       m <- deref (matrix ! ix)
       ifte_ ((m `iShiftR` (safeCast iy) .& 1) ==? 1)
         (do
           key_ref <- local (izero :: Init ('Stored Uint8))
-          fn_key <- call get_fn_key keymap ix iy
-          normal_key <- deref (keymap ! 0 ! ix ! iy)
+          fn_key <- call get_fn_key keymaps ix iy
+          normal_key <- deref (keymaps ! 0 ! ix ! iy)
           ifte_ (fp)
             (store key_ref fn_key)
             (store key_ref normal_key)
