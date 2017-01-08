@@ -10,7 +10,7 @@ CFLAGS += -mmcu=$(MCU)
 CFLAGS += -std=c11
 
 haskell = cadet.cabal stack.yaml
-ivory-gen = cadet.c ivory.h ivory_asserts.h ivory_templates.h
+ivory-gen = cadet.c cadet.h ivory.h ivory_asserts.h ivory_templates.h
 ivory-src = app/Main.hs src/Lib.hs
 objects = cadet.o main.o print.o usb.o
 
