@@ -44,11 +44,16 @@ matrix_changed = proc "matrix_changed" $ \ a b -> body $ do
     aE <- deref (a ! ix)
     bE <- deref (b ! ix)
     ifte_ (aE /=? bE)
-      (ret true)
       (do
-        nn <- deref n
-        store n nn)
-  ret false
+        n' <- deref n
+        store n (n' + 1))
+      (do
+        n' <- deref n
+        store n n')
+  n' <- deref n
+  ifte_ (n' ==? 0)
+    (ret false)
+    (ret true)
 
 fn_pressed :: Def ('[Ref s Matrix, Ref s Keymap] :-> IBool)
 fn_pressed = proc "fn_pressed" $ \ matrix keymap -> body $ do
@@ -58,11 +63,16 @@ fn_pressed = proc "fn_pressed" $ \ matrix keymap -> body $ do
       m <- deref (matrix ! ix)
       k <- deref (keymap ! ix ! iy)
       ifte_ ((((m `iShiftR` (safeCast iy)) .& 1) ==? 1) .&& k ==? key_fn)
-        (ret true)
         (do
-          nn <- deref n
-          store n nn)
-  ret false
+          n' <- deref n
+          store n (n' + 1))
+        (do
+          n' <- deref n
+          store n n')
+  n' <- deref n
+  ifte_ (n' ==? 0)
+    (ret false)
+    (ret true)
 
 get_fn_key :: Def ('[Ref s (Array 2 Keymap), Ix 5, Ix 15] :-> Uint8)
 get_fn_key = proc "get_fn_key" $ \ keymaps row col -> body $ do
